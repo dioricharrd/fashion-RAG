@@ -1,0 +1,29 @@
+# === WEB FRAMEWORK ===
+fastapi
+uvicorn[standard]
+python-multipart
+
+# === CORE UTILITIES ===
+numpy
+pandas
+tqdm
+pillow
+requests
+
+# === VECTOR DATABASE (FAISS) ===
+faiss-cpu
+
+# === TRANSFORMERS + GENERATIVE MODEL ===
+transformers
+sentencepiece
+safetensors
+huggingface-hub
+
+# === TORCH (versi fleksibel agar sesuai OS / CPU / GPU) ===
+# Note: versi akan dipilih otomatis untuk Windows/macOS
+torch
+torchvision
+torchaudio
+
+# === OPTIONAL PERFORMANCE ===
+scikit-learn
