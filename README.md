@@ -82,7 +82,7 @@ cd fashion-rag-backend
 python3.10 -m venv venv
 source venv/bin/activate  # macOS / Linux
 
-## Install Dependencies
+## 2.2 Install Dependencies
 pip install faiss-cpu==1.8.0
 pip install -r requirements.txt
 
@@ -90,9 +90,9 @@ pip install -r requirements.txt
 
 python build_index.py
 
-## Jalankan Backend (FastAPI)
+## 2.4 Jalankan Backend (FastAPI)
 uvicorn app:app --reload
-## Backend akan running di:
+## 2.5 Backend akan running di:
 http://127.0.0.1:8000 (localhost)
 
 # 🎨 3. Setup Frontend (Next.js)
@@ -106,7 +106,7 @@ npm install
 ## 3.2 Jalankan Frontend:
 npm run dev
 
-## Next.js akan berjalan di:
+## 3.3 Next.js akan berjalan di:
 http://localhost:3000
 
 # 🔀 4. Cara Kerja Sistem (Pipeline Overview)
