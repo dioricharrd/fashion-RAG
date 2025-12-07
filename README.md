@@ -24,24 +24,32 @@ Proyek ini mengimplementasikan sistem RAG (Retrieval-Augmented Generation) yang 
 
 
 # 📁 Struktur Project
+
+<details>
+<summary><strong>📁 Struktur Project</strong></summary>
+
+```
 fashion-RAG/
-│
 ├── fashion-rag-backend/
-│   ├── app.py                  # FastAPI server
-│   ├── build_index.py          # Script untuk membangun FAISS index
-│   ├── fashion_metadata.pkl    # Metadata produk (di-generate or sudah ada)
-│   ├── fashion_product.index   # FAISS index (di-generate)
+│   ├── app.py
+│   ├── build_index.py
+│   ├── fashion_metadata.pkl
+│   ├── fashion_product.index
 │   └── requirements.txt
 │
 ├── fashion-rag-frontend/
-│   ├── app/                    # Next.js app (src)
+│   ├── app/
 │   ├── public/
 │   ├── package.json
 │   └── .env.example
 │
-├── fashion_rag_pipeline.ipynb  # Notebook pipeline (preprocess, embeddings, build)
+├── fashion_rag_pipeline.ipynb
 ├── README.md
-└── venv/                       # optional lokal venv (tidak disertakan di repo)
+└── venv/
+```
+
+</details>
+
 
 # ✅ Prasyarat (Prerequisites)
 ## Backend
@@ -133,7 +141,7 @@ UI Output
 ### Masukkan deskripsi seperti:
 "a blue denim jeans"
 
-→ Sistem menampilkan produk fashion paling relevan.
+→ Sistem menampilkan produk fashion paling relevan:
 <img width="1342" height="299" alt="image" src="https://github.com/user-attachments/assets/03a0b5be-fb57-4b10-afbf-fee712ad8b1c" />
 
 ## 5.2 Search by Text
