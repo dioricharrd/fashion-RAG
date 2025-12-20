@@ -1,8 +1,3 @@
-# config.py
-"""
-Konfigurasi path & nama model.
-Bisa kamu ubah sesuai kebutuhan.
-"""
 
 INDEX_PATH = "fashion_product.index"      # file FAISS
 METADATA_PATH = "fashion_metadata.pkl"    # file metadata (pickle / DataFrame)

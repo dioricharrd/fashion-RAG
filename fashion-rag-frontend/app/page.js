@@ -21,6 +21,9 @@ export default function Home() {
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
 
+  // state untuk ai search
+  const [aiPrompt, setAiPrompt] = useState("");
+
   // hasil
   const [results, setResults] = useState([]);
   const [ragText, setRagText] = useState("");
@@ -64,6 +67,9 @@ export default function Home() {
         if (entry.type === "image") {
           return !(h.label === entry.label && h.topK === entry.topK);
         }
+        if (entry.type === "ai") {
+          return !(h.query === entry.query && h.topK === entry.topK);
+        }
         return true;
       });
 
@@ -84,6 +90,9 @@ export default function Home() {
       if (item.preview) {
         setImagePreview(item.preview);
       }
+    } else if (item.type === "ai") {
+      // isi ulang prompt; user klik "Search AI"
+      setAiPrompt(item.query || item.label || "");
     }
   }
 
@@ -127,6 +136,51 @@ export default function Home() {
     } catch (err) {
       console.error(err);
       setError("Gagal melakukan text search. Cek backend di port 8000.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // =========================
+  // AI SEARCH
+  // =========================
+  async function handleAISearch(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setResults([]);
+    setRagText("");
+    setSelectedItem(null);
+    setShowModal(false);
+
+    const promptTrimmed = aiPrompt.trim();
+
+    try {
+      const res = await fetch(`${API_BASE}/search/ai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: promptTrimmed,
+          top_k: Number(topK),
+        }),
+      });
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const data = await res.json();
+
+      setResults(data.results || []);
+      setRagText(data.rag_text || "");
+
+      // simpan ke history
+      addHistory({
+        type: "ai",
+        label: promptTrimmed,
+        query: promptTrimmed,
+        topK: Number(topK),
+      });
+    } catch (err) {
+      console.error(err);
+      setError("Gagal melakukan AI search. Cek backend di port 8000.");
     } finally {
       setLoading(false);
     }
@@ -437,6 +491,64 @@ export default function Home() {
               </form>
             </section>
 
+            {/* AI SEARCH */}
+            <section className={`${cardClasses} ${cardTone}`}>
+              <h2 className="text-base font-semibold sm:text-lg">Search by AI</h2>
+              <p className={`mb-4 mt-1 text-xs sm:text-sm ${subtleText2}`}>
+                Tulis prompt kreatif atau deskripsi detail tentang produk yang ingin dicari. AI
+                akan menginterpretasi dan menemukan produk yang paling relevan.
+              </p>
+
+              <form onSubmit={handleAISearch} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium sm:text-sm">
+                    AI Prompt
+                  </label>
+                  <textarea
+                    placeholder="Contoh: 'Cari pakaian untuk musim panas yang nyaman dan stylish dengan warna cerah'..."
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    rows={3}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ring-0 transition sm:text-base ${
+                      isDark
+                        ? "border-slate-800 bg-slate-950/80 text-slate-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40"
+                        : "border-slate-300 bg-white text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40"
+                    }`}
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 text-xs sm:text-sm">
+                  <label className={subtleText}>
+                    Top K
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={topK}
+                      onChange={(e) => setTopK(e.target.value)}
+                      className={`ml-2 w-20 rounded-md border px-2 py-1 text-right text-xs outline-none ${
+                        isDark
+                          ? "border-slate-800 bg-slate-950 text-slate-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40"
+                          : "border-slate-300 bg-white text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40"
+                      }`}
+                    />
+                  </label>
+                  <span className={`text-[11px] ${subtleText2}`}>
+                    Sistem akan mengembalikan {topK} produk paling relevan.
+                  </span>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="inline-flex items-center justify-center rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-md shadow-indigo-500/40 transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading ? "Searching..." : "Search AI"}
+                </button>
+              </form>
+            </section>
+
             {/* ERROR */}
             {error && (
               <div
@@ -501,23 +613,25 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => applyHistoryItem(item)}
-                        className="flex flex-1 items-center gap-2 text-left hover:opacity-90"
+                        className="flex flex-1 items-center gap-2 overflow-hidden text-left hover:opacity-90"
                       >
                         <span
-                          className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                             item.type === "text"
                               ? "bg-emerald-500/20 text-emerald-300"
-                              : "bg-sky-500/20 text-sky-300"
+                              : item.type === "image"
+                              ? "bg-sky-500/20 text-sky-300"
+                              : "bg-violet-500/20 text-violet-300"
                           }`}
                         >
-                          {item.type === "text" ? "T" : "I"}
+                          {item.type === "text" ? "T" : item.type === "image" ? "I" : "A"}
                         </span>
-                        <div className="flex-1">
+                        <div className="flex-1 overflow-hidden">
                           <p className="truncate text-xs font-medium sm:text-sm">
                             {item.label}
                           </p>
-                          <p className={`text-[11px] ${subtleText2}`}>
-                            {item.type === "text" ? "Text query" : "Image search"} · Top K{" "}
+                          <p className={`truncate text-[11px] ${subtleText2}`}>
+                            {item.type === "text" ? "Text query" : item.type === "image" ? "Image search" : "AI prompt"} · Top K{" "}
                             {item.topK}
                           </p>
                         </div>
