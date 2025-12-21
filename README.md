@@ -66,108 +66,249 @@ fashion-RAG/
 
 ---------------------------------------------------------------------------------------
 
-# 🔽 1. Download Proyek
-## Clone repository:
+---
 
+# 🚀 Instalasi dan Setup
+
+## 🔽 1. Download Proyek
+
+Clone repository dari GitHub:
+
+```bash
 git clone https://github.com/dioricharrd/fashion-RAG.git
 cd fashion-RAG
+```
 
-# 🛠️ 2. Setup Backend
+## 🛠️ 2. Setup Backend
 
-## Masuk ke folder backend:
+### 2.1 Masuk ke Folder Backend
+
+```bash
 cd fashion-rag-backend
+```
 
-## 2.1 Buat Virtual Environment:
+### 2.2 Buat dan Aktifkan Virtual Environment
 
+**Buat virtual environment:**
+```bash
 python3.10 -m venv venv
-source venv/bin/activate  # macOS / Linux
+```
 
-## 2.2 Install Dependencies
+**Aktivasi virtual environment:**
+
+- **macOS / Linux:**
+  ```bash
+  source venv/bin/activate
+  ```
+
+- **Windows (Command Prompt):**
+  ```cmd
+  venv\Scripts\activate
+  ```
+
+- **Windows (PowerShell):**
+  ```powershell
+  venv\Scripts\Activate.ps1
+  ```
+
+> **💡 Catatan:** Jika menggunakan PowerShell dan mendapat error "running scripts is disabled", jalankan:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+### 2.3 Install Dependencies
+
+```bash
 pip install faiss-cpu==1.8.0
 pip install -r requirements.txt
+```
 
-## 2.3 Build FAISS Index
+### 2.4 Build FAISS Index
 
+Jalankan script untuk membangun index FAISS dari dataset:
+
+```bash
 python build_index.py
+```
 
-## 2.4 Jalankan Backend (FastAPI)
+> **⏱️ Catatan:** Proses ini memerlukan waktu beberapa menit tergantung ukuran dataset.
+
+### 2.5 Jalankan Backend Server
+
+```bash
 uvicorn app:app --reload
-## 2.5 Backend akan running di:
-http://127.0.0.1:8000 (localhost)
+```
 
-# 🎨 3. Setup Frontend (Next.js)
-## Masuk ke folder:
+✅ Backend akan berjalan di: **http://127.0.0.1:8000**
 
+## 🎨 3. Setup Frontend (Next.js)
+
+### 3.1 Masuk ke Folder Frontend
+
+```bash
 cd fashion-rag-frontend
+```
 
-## 3.1 Install Dependency:
+> **📝 Catatan:** Jika Anda berada di folder backend, kembali ke root terlebih dahulu:
+> ```bash
+> cd ..
+> cd fashion-rag-frontend
+> ```
+
+### 3.2 Install Dependencies
+
+```bash
 npm install
+```
 
-## 3.2 Jalankan Frontend:
+### 3.3 Konfigurasi Environment Variables
+
+Buat file `.env.local` di folder `fashion-rag-frontend`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+### 3.4 Jalankan Development Server
+
+```bash
 npm run dev
+```
 
-## 3.3 Next.js akan berjalan di:
-http://localhost:3000
+✅ Frontend akan berjalan di: **http://localhost:3000**
+
+---
 
 # 🔀 4. Cara Kerja Sistem (Pipeline Overview)
 
-Pipeline di dalam notebook fashion_rag_pipeline.ipynb melakukan hal berikut:
+Pipeline di dalam notebook `fashion_rag_pipeline.ipynb` melakukan langkah-langkah berikut:
 
-1. Load dataset + metadata produk
-2. Ekstraksi embedding gambar dengan CLIP
-3. Ekstraksi embedding teks dengan Sentence Transformers
-4. Gabungkan metadata + vector embedding
-5. Bangun FAISS index
-6. Save index ke file .index
-7. Backend memanggil index ini untuk search
+1. **Load Dataset** - Memuat dataset produk fashion beserta metadata
+2. **Ekstraksi Embedding Gambar** - Menggunakan CLIP untuk mengubah gambar menjadi vektor
+3. **Ekstraksi Embedding Teks** - Menggunakan Sentence Transformers untuk encoding deskripsi
+4. **Gabungkan Data** - Menggabungkan metadata dengan vector embedding
+5. **Build FAISS Index** - Membuat index untuk pencarian cepat
+6. **Save Index** - Menyimpan index ke file `.index`
+7. **Backend Integration** - Backend memanggil index ini untuk melakukan pencarian
 
-### Ilustrasi sederhana:
+### 📊 Ilustrasi Alur Sistem:
+
+```
 Query (text/image)
-      ↓
+       ↓
 Encoder (CLIP / SBERT)
-      ↓
+       ↓
 Vectorized Query
-      ↓
+       ↓
 FAISS Search
-      ↓
+       ↓
 Top-K Results
-      ↓
+       ↓
 LLM (opsional RAG)
-      ↓
+       ↓
 UI Output
+```
+
+---
 
 # 🚀 5. Cara Menggunakan
-## 5.1 Search by Text
-### Masukkan deskripsi seperti:
-"a blue denim jeans"
 
-→ Sistem menampilkan produk fashion paling relevan:
+## 5.1 Search by Text (Pencarian dengan Deskripsi)
+
+**Cara Penggunaan:**
+1. Buka aplikasi di http://localhost:3000
+2. Masukkan deskripsi produk yang Anda cari
+3. Tekan tombol Search
+
+**Contoh Query:**
+```
+"a blue denim jeans"
+"red summer dress"
+"black leather jacket"
+```
+
+→ Sistem akan menampilkan produk fashion yang paling relevan dengan deskripsi Anda:
+
 <img width="1342" height="299" alt="image" src="https://github.com/user-attachments/assets/03a0b5be-fb57-4b10-afbf-fee712ad8b1c" />
 
-## 5.2 Search by Text
-### upload gambar:
-→ Sistem mengambil embedding → mencari gambar paling mirip.
+## 5.2 Search by Image (Pencarian dengan Gambar)
 
-## 5.3 RAG Mode:
-Model mengambil konteks fashion dan menjawab:
-"give me outfit suggestion based on this style"
+**Cara Penggunaan:**
+1. Klik tombol "Upload Image"
+2. Pilih gambar produk fashion dari komputer Anda
+3. Sistem akan menganalisis gambar dan mencari produk dengan style yang mirip
+
+→ Sistem mengambil embedding dari gambar → mencari gambar dengan kemiripan tertinggi
+
+## 5.3 RAG Mode (Rekomendasi dengan AI)
+
+**Cara Penggunaan:**
+1. Upload gambar atau masukkan deskripsi
+2. Gunakan fitur chat untuk bertanya kepada AI
+
+**Contoh Pertanyaan:**
+```
+"Give me outfit suggestions based on this style"
+"What accessories would match this dress?"
+"Suggest similar items in different colors"
+```
+
+→ Model AI akan mengambil konteks dari hasil pencarian dan memberikan rekomendasi yang relevan
+
+---
 
 # 📦 6. Environment Variables
-## Pada frontend:
 
+## Frontend Environment Variables
+
+Buat file `.env.local` di folder `fashion-rag-frontend` dengan konfigurasi berikut:
+
+```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
-Simpan sebagai .env.local.
+```
 
-# 7. Testing API (Opsional)
-## Coba endpoint:
+## Backend Environment Variables (Opsional)
 
-http://localhost:8000/docs
+Jika diperlukan, Anda bisa membuat file `.env` di folder `fashion-rag-backend`:
 
-## Swagger UI akan muncul dan kamu bisa test semua endpoint seperti:
+```env
+# Contoh konfigurasi tambahan
+MODEL_PATH=./models
+INDEX_PATH=./fashion_product.index
+```
 
-/search_text
-/search_image
-/recommend
+---
+
+# 🧪 7. Testing API
+
+## Menggunakan Swagger UI
+
+FastAPI menyediakan dokumentasi interaktif untuk testing API:
+
+1. Pastikan backend sudah berjalan
+2. Buka browser dan akses:
+   ```
+   http://localhost:8000/docs
+   ```
+
+3. Swagger UI akan muncul dengan daftar endpoint yang tersedia
+
+## Available Endpoints:
+
+| Endpoint | Method | Deskripsi |
+|----------|--------|----------|
+| `/search_text` | POST | Pencarian produk berdasarkan deskripsi teks |
+| `/search_image` | POST | Pencarian produk berdasarkan gambar |
+| `/recommend` | POST | Rekomendasi produk berdasarkan preferensi |
+
+## Contoh Request dengan cURL:
+
+**Search by Text:**
+```bash
+curl -X POST "http://localhost:8000/search_text" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "blue denim jeans", "top_k": 5}'
+```
 
 # 🗂️ 8. Dataset
 
