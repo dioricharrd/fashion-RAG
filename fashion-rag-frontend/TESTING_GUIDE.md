@@ -101,6 +101,17 @@ npm run dev
 - [ ] Test all features on mobile view
 - [ ] Verify touch interactions work
 
+### 13. Tab Selector
+- [ ] Click "Text" tab - shows text search form
+- [ ] Click "Image" tab - shows image upload form
+- [ ] Click "AI" tab - shows AI prompt form
+- [ ] Active tab is highlighted correctly
+- [ ] Description updates when switching tabs
+- [ ] History items auto-switch to correct mode
+- [ ] Works on mobile, tablet, desktop
+- [ ] Keyboard navigation works (Tab key)
+- [ ] Theme toggle affects tab colors
+
 ---
 
 ## 🔍 Component-Specific Tests

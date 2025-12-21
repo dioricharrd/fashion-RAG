@@ -14,6 +14,7 @@ import { Footer } from '@/components/Layout/Footer';
 import { RAGOutput } from '@/components/Layout/RAGOutput';
 
 // Search form components
+import { SearchModeTabs } from '@/components/SearchForms/SearchModeTabs';
 import { TextSearch } from '@/components/SearchForms/TextSearch';
 import { ImageSearch } from '@/components/SearchForms/ImageSearch';
 import { AISearch } from '@/components/SearchForms/AISearch';
@@ -42,6 +43,9 @@ export default function Home() {
 
   // Debug mode
   const [debugMode, setDebugMode] = useState(false);
+
+  // Search mode state
+  const [searchMode, setSearchMode] = useState('text'); // 'text' | 'image' | 'ai'
 
   // Text search state
   const [textQuery, setTextQuery] = useState('');
@@ -101,6 +105,10 @@ export default function Home() {
 
   function applyHistoryItem(item) {
     setTopK(String(item.topK));
+    
+    // Switch to appropriate search mode
+    setSearchMode(item.type);
+    
     if (item.type === 'text') {
       setTextQuery(item.query || item.label || '');
     } else if (item.type === 'image') {
@@ -286,49 +294,65 @@ export default function Home() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
           {/* LEFT – Forms + history */}
           <div className="space-y-6">
-            <TextSearch
-              textQuery={textQuery}
-              setTextQuery={setTextQuery}
-              topK={topK}
-              setTopK={setTopK}
-              onSearch={onTextSearch}
-              loading={loading}
+            {/* Search Mode Tabs */}
+            <SearchModeTabs
+              searchMode={searchMode}
+              setSearchMode={setSearchMode}
               isDark={isDark}
               cardClasses={cardClasses}
               cardTone={cardTone}
-              subtleText={subtleText}
-              subtleText2={subtleText2}
             />
 
-            <ImageSearch
-              imageFile={imageFile}
-              imagePreview={imagePreview}
-              fileInputRef={fileInputRef}
-              onImageChange={onImageChange}
-              onSearch={onImageSearch}
-              topK={topK}
-              setTopK={setTopK}
-              loading={loading}
-              isDark={isDark}
-              cardClasses={cardClasses}
-              cardTone={cardTone}
-              subtleText={subtleText}
-              subtleText2={subtleText2}
-            />
+            {/* Conditional Search Forms */}
+            {searchMode === 'text' && (
+              <TextSearch
+                textQuery={textQuery}
+                setTextQuery={setTextQuery}
+                topK={topK}
+                setTopK={setTopK}
+                onSearch={onTextSearch}
+                loading={loading}
+                isDark={isDark}
+                cardClasses={cardClasses}
+                cardTone={cardTone}
+                subtleText={subtleText}
+                subtleText2={subtleText2}
+              />
+            )}
 
-            <AISearch
-              aiPrompt={aiPrompt}
-              setAiPrompt={setAiPrompt}
-              topK={topK}
-              setTopK={setTopK}
-              onSearch={onAISearch}
-              loading={loading}
-              isDark={isDark}
-              cardClasses={cardClasses}
-              cardTone={cardTone}
-              subtleText={subtleText}
-              subtleText2={subtleText2}
-            />
+            {searchMode === 'image' && (
+              <ImageSearch
+                imageFile={imageFile}
+                imagePreview={imagePreview}
+                fileInputRef={fileInputRef}
+                onImageChange={onImageChange}
+                onSearch={onImageSearch}
+                topK={topK}
+                setTopK={setTopK}
+                loading={loading}
+                isDark={isDark}
+                cardClasses={cardClasses}
+                cardTone={cardTone}
+                subtleText={subtleText}
+                subtleText2={subtleText2}
+              />
+            )}
+
+            {searchMode === 'ai' && (
+              <AISearch
+                aiPrompt={aiPrompt}
+                setAiPrompt={setAiPrompt}
+                topK={topK}
+                setTopK={setTopK}
+                onSearch={onAISearch}
+                loading={loading}
+                isDark={isDark}
+                cardClasses={cardClasses}
+                cardTone={cardTone}
+                subtleText={subtleText}
+                subtleText2={subtleText2}
+              />
+            )}
 
             {/* Error */}
             {error && (
