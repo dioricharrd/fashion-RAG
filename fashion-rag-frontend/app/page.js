@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 
 const API_BASE = "http://localhost:8000";
 
@@ -38,6 +38,21 @@ export default function Home() {
   // item: { id, type: 'text'|'image', label, query?, file?, preview?, topK }
   const [history, setHistory] = useState([]);
 
+  // NEW FEATURES
+  // Toast notifications
+  const [toast, setToast] = useState(null);
+
+  // Compare mode
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  // Sort & Filter
+  const [sortBy, setSortBy] = useState("score"); // "score" | "name"
+  const [filterCategory, setFilterCategory] = useState("all");
+
+  // Request cancellation
+  const abortControllerRef = useRef(null);
+
   // tutup modal dengan Escape
   useEffect(() => {
     if (!showModal) return;
@@ -47,6 +62,18 @@ export default function Home() {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [showModal]);
+
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  // Helper function to show toast
+  const showToast = useCallback((message, type = "info") => {
+    setToast({ message, type });
+  }, []);
 
   // =========================
   // HELPER HISTORY
@@ -101,14 +128,22 @@ export default function Home() {
   // =========================
   async function handleTextSearch(e) {
     e.preventDefault();
+
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     setLoading(true);
     setError("");
     setResults([]);
     setRagText("");
     setSelectedItem(null);
     setShowModal(false);
+    setSelectedItems([]);
 
     const queryTrimmed = textQuery.trim();
+    abortControllerRef.current = new AbortController();
 
     try {
       const res = await fetch(`${API_BASE}/search/text`, {
@@ -118,6 +153,7 @@ export default function Home() {
           query: queryTrimmed,
           top_k: Number(topK),
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -133,9 +169,16 @@ export default function Home() {
         query: queryTrimmed,
         topK: Number(topK),
       });
+
+      showToast(`Found ${data.results?.length || 0} results!`, "success");
     } catch (err) {
+      if (err.name === 'AbortError') {
+        showToast("Search cancelled", "info");
+        return;
+      }
       console.error(err);
       setError("Gagal melakukan text search. Cek backend di port 8000.");
+      showToast("Search failed", "error");
     } finally {
       setLoading(false);
     }
@@ -146,14 +189,22 @@ export default function Home() {
   // =========================
   async function handleAISearch(e) {
     e.preventDefault();
+
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     setLoading(true);
     setError("");
     setResults([]);
     setRagText("");
     setSelectedItem(null);
     setShowModal(false);
+    setSelectedItems([]);
 
     const promptTrimmed = aiPrompt.trim();
+    abortControllerRef.current = new AbortController();
 
     try {
       const res = await fetch(`${API_BASE}/search/ai`, {
@@ -163,6 +214,7 @@ export default function Home() {
           prompt: promptTrimmed,
           top_k: Number(topK),
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -178,9 +230,16 @@ export default function Home() {
         query: promptTrimmed,
         topK: Number(topK),
       });
+
+      showToast(`Found ${data.results?.length || 0} results!`, "success");
     } catch (err) {
+      if (err.name === 'AbortError') {
+        showToast("Search cancelled", "info");
+        return;
+      }
       console.error(err);
       setError("Gagal melakukan AI search. Cek backend di port 8000.");
+      showToast("Search failed", "error");
     } finally {
       setLoading(false);
     }
@@ -202,7 +261,13 @@ export default function Home() {
     e.preventDefault();
     if (!imageFile) {
       setError("Pilih gambar dulu sebelum melakukan image search.");
+      showToast("Please select an image first", "error");
       return;
+    }
+
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
 
     setLoading(true);
@@ -211,6 +276,9 @@ export default function Home() {
     setRagText("");
     setSelectedItem(null);
     setShowModal(false);
+    setSelectedItems([]);
+
+    abortControllerRef.current = new AbortController();
 
     try {
       const formData = new FormData();
@@ -220,6 +288,7 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/search/image?top_k=${topK}`, {
         method: "POST",
         body: formData,
+        signal: abortControllerRef.current.signal,
       });
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
@@ -236,9 +305,16 @@ export default function Home() {
         preview: imagePreview,
         topK: Number(topK),
       });
+
+      showToast(`Found ${data.results?.length || 0} results!`, "success");
     } catch (err) {
+      if (err.name === 'AbortError') {
+        showToast("Search cancelled", "info");
+        return;
+      }
       console.error(err);
       setError("Gagal melakukan image search. Cek backend di port 8000.");
+      showToast("Search failed", "error");
     } finally {
       setLoading(false);
     }
@@ -253,6 +329,80 @@ export default function Home() {
   function closeModal() {
     setShowModal(false);
   }
+
+  // Export results to JSON
+  function exportResults() {
+    if (!results || results.length === 0) {
+      showToast("No results to export", "error");
+      return;
+    }
+    const dataStr = JSON.stringify({
+      results,
+      ragText,
+      exportedAt: new Date().toISOString(),
+      totalResults: results.length,
+    }, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fashion-search-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Results exported successfully!", "success");
+  }
+
+  // Toggle compare mode
+  function toggleCompareMode() {
+    setCompareMode(!compareMode);
+    setSelectedItems([]);
+    showToast(compareMode ? "Compare mode disabled" : "Compare mode enabled - select items to compare", "info");
+  }
+
+  // Handle item selection in compare mode
+  function toggleItemSelection(item) {
+    setSelectedItems((prev) => {
+      const isSelected = prev.some((i) => i.idx === item.idx);
+      if (isSelected) {
+        return prev.filter((i) => i.idx !== item.idx);
+      } else {
+        if (prev.length >= 3) {
+          showToast("Maximum 3 items can be compared", "error");
+          return prev;
+        }
+        return [...prev, item];
+      }
+    });
+  }
+
+  // Get unique categories from results
+  const categories = useMemo(() => {
+    if (!results || results.length === 0) return [];
+    const cats = [...new Set(results.map(r => r.category).filter(Boolean))];
+    return cats.sort();
+  }, [results]);
+
+  // Filter and sort results
+  const filteredAndSortedResults = useMemo(() => {
+    let filtered = [...results];
+    
+    // Apply category filter
+    if (filterCategory !== "all") {
+      filtered = filtered.filter(r => r.category === filterCategory);
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === "score") {
+        return (b.score || 0) - (a.score || 0);
+      } else if (sortBy === "name") {
+        return (a.display_name || "").localeCompare(b.display_name || "");
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [results, filterCategory, sortBy]);
 
   // util kelas card biar nggak ngulang
   const cardClasses =
@@ -721,48 +871,168 @@ export default function Home() {
           {/* Real results */}
           {results.length > 0 && (
             <>
-              <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-base font-semibold sm:text-lg">
                   Retrieved Products{" "}
                   <span className={`text-sm font-normal ${subtleText2}`}>
-                    ({results.length})
+                    ({filteredAndSortedResults.length}/{results.length})
                   </span>
                 </h2>
+                
+                {/* Action buttons and filters */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Category Filter */}
+                  {categories.length > 1 && (
+                    <select
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs outline-none transition ${
+                        isDark
+                          ? "border-slate-700 bg-slate-900 text-slate-200"
+                          : "border-slate-300 bg-white text-slate-800"
+                      }`}
+                    >
+                      <option value="all">All Categories</option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Sort */}
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs outline-none transition ${
+                      isDark
+                        ? "border-slate-700 bg-slate-900 text-slate-200"
+                        : "border-slate-300 bg-white text-slate-800"
+                    }`}
+                  >
+                    <option value="score">Sort by Score</option>
+                    <option value="name">Sort by Name</option>
+                  </select>
+
+                  {/* Compare Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={toggleCompareMode}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      compareMode
+                        ? "border-indigo-500 bg-indigo-500/20 text-indigo-200"
+                        : isDark
+                        ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500"
+                        : "border-slate-300 bg-white text-slate-800 hover:border-indigo-500"
+                    }`}
+                  >
+                    {compareMode ? `Compare (${selectedItems.length})` : "Compare"}
+                  </button>
+
+                  {/* Export Button */}
+                  <button
+                    type="button"
+                    onClick={exportResults}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                      isDark
+                        ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500"
+                        : "border-slate-300 bg-white text-slate-800 hover:border-indigo-500"
+                    }`}
+                    title="Export results to JSON"
+                  >
+                    📥 Export
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-                {results.map((item) => (
-                  <article
-                    key={item.idx}
-                    onClick={() => openModal(item)}
-                    className={`group flex cursor-pointer flex-col overflow-hidden rounded-2xl border shadow-md transition hover:-translate-y-1 hover:border-indigo-500/70 hover:shadow-xl hover:shadow-indigo-900/50 ${
-                      isDark
-                        ? "border-slate-800 bg-slate-900/80 shadow-slate-950/70"
-                        : "border-slate-200 bg-white shadow-slate-200/70"
-                    }`}
-                  >
-                    <div className="relative aspect-[3/4] overflow-hidden bg-slate-900">
-                      <img
-                        src={`${API_BASE}/image/${item.idx}`}
-                        alt={item.display_name || "Product image"}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1 px-3 py-3">
-                      <h3 className="line-clamp-2 text-sm font-semibold">
-                        {item.display_name || "Untitled"}
-                      </h3>
-                      <p className={`text-xs ${subtleText2}`}>{item.category}</p>
-                      <p className={`mt-1 text-[11px] ${subtleText2}`}>
-                        Score:{" "}
-                        <span className="font-mono">
-                          {item.score.toFixed(4)}
-                        </span>
-                      </p>
-                    </div>
-                  </article>
-                ))}
+                {filteredAndSortedResults.map((item) => {
+                  const isSelected = selectedItems.some((i) => i.idx === item.idx);
+                  return (
+                    <article
+                      key={item.idx}
+                      onClick={() => {
+                        if (compareMode) {
+                          toggleItemSelection(item);
+                        } else {
+                          openModal(item);
+                        }
+                      }}
+                      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border shadow-md transition hover:-translate-y-1 hover:shadow-xl ${
+                        compareMode && isSelected
+                          ? "border-indigo-500 ring-2 ring-indigo-500/50"
+                          : isDark
+                          ? "border-slate-800 bg-slate-900/80 shadow-slate-950/70 hover:border-indigo-500/70 hover:shadow-indigo-900/50"
+                          : "border-slate-200 bg-white shadow-slate-200/70 hover:border-indigo-500/70 hover:shadow-indigo-200/50"
+                      }`}
+                    >
+                      {compareMode && isSelected && (
+                        <div className="absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-xs font-bold text-white shadow-lg">
+                          ✓
+                        </div>
+                      )}
+                      <div className="relative aspect-[3/4] overflow-hidden bg-slate-900">
+                        <img
+                          src={`${API_BASE}/image/${item.idx}`}
+                          alt={item.display_name || "Product image"}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
+                      </div>
+                      <div className="flex flex-1 flex-col gap-1 px-3 py-3">
+                        <h3 className="line-clamp-2 text-sm font-semibold">
+                          {item.display_name || "Untitled"}
+                        </h3>
+                        <p className={`text-xs ${subtleText2}`}>{item.category}</p>
+                        <p className={`mt-1 text-[11px] ${subtleText2}`}>
+                          Score:{" "}
+                          <span className="font-mono">
+                            {item.score.toFixed(4)}
+                          </span>
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
+
+              {/* Comparison View */}
+              {compareMode && selectedItems.length >= 2 && (
+                <div className={`mt-6 ${cardClasses} ${cardTone}`}>
+                  <div className="mb-3 flex items-center justify-between">
+                    <h3 className="text-base font-semibold">Comparison</h3>
+                    <button
+                      onClick={() => setSelectedItems([])}
+                      className="text-xs underline-offset-2 hover:underline"
+                    >
+                      Clear selection
+                    </button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {selectedItems.map((item) => (
+                      <div key={item.idx} className="space-y-2">
+                        <div className={`overflow-hidden rounded-lg border ${
+                          isDark ? "border-slate-700" : "border-slate-300"
+                        }`}>
+                          <img
+                            src={`${API_BASE}/image/${item.idx}`}
+                            alt={item.display_name}
+                            className="w-full object-cover aspect-[3/4]"
+                          />
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <p className="font-semibold">{item.display_name}</p>
+                          <p className={`text-xs ${subtleText2}`}>
+                            Category: {item.category}
+                          </p>
+                          <p className={`text-xs ${subtleText2}`}>
+                            Score: <span className="font-mono">{item.score.toFixed(4)}</span>
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -938,6 +1208,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={closeModal}
+                aria-label="Close modal"
                 className="rounded-full p-1 text-slate-400 hover:bg-slate-700/40 hover:text-slate-100"
               >
                 ✕
@@ -999,6 +1270,38 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATION */}
+      {toast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div
+            className={`flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm ${
+              toast.type === "success"
+                ? isDark
+                  ? "border-emerald-500/50 bg-emerald-900/90 text-emerald-50"
+                  : "border-emerald-500 bg-emerald-50 text-emerald-900"
+                : toast.type === "error"
+                ? isDark
+                  ? "border-red-500/50 bg-red-900/90 text-red-50"
+                  : "border-red-500 bg-red-50 text-red-900"
+                : isDark
+                ? "border-slate-700 bg-slate-900/90 text-slate-50"
+                : "border-slate-300 bg-white text-slate-900"
+            }`}
+          >
+            <span className="text-lg">
+              {toast.type === "success" ? "✓" : toast.type === "error" ? "✕" : "ℹ"}
+            </span>
+            <p className="text-sm font-medium">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 text-xs opacity-70 hover:opacity-100"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
