@@ -242,8 +242,6 @@ See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for comprehensive testing instruction
 
 ## 📚 Documentation
 
-- **[REFACTORING.md](./REFACTORING.md)** - Complete refactoring guide and architecture overview
-- **[COMPONENT_SUMMARY.md](./COMPONENT_SUMMARY.md)** - Detailed component documentation
 - **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - Testing strategies and examples
 
 ## 🏗️ Tech Stack
